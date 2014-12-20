@@ -2,7 +2,7 @@
 
 (function(root, factory) {
   if (!root.Promise) {
-    throw new Error('Marionette.Presenter depends on the ES6 Promise spec at root.Promise');
+    throw new Error('Marionette.Presenter depends on ES6 Promise at global/window.Promise');
   }
 
   if (typeof define === 'function' && define.amd) {
@@ -23,6 +23,7 @@
   'use strict';
 
   // @include has-state.mixin.js
+  // @include marionette.state-service.js
   // @include marionette.presenter.js
 
   return Presenter;

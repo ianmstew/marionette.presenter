@@ -1,4 +1,4 @@
-/* global Marionette, _, HasState */
+/* global Marionette, _ */
 
 /*
  * A Presenter's purpose is to provide nestable presentation and data logic for views with built
@@ -8,36 +8,48 @@
  *   - http://victorsavkin.com/post/49767352960/supervising-presenters.
  *   - http://www.backbonerails.com/screencasts/loading-views
  */
-var Presenter = Marionette.Object.extend({
+var Presenter = Marionette.StateService.extend({
 
-  region: undefined,
-  view: undefined,
+  // Default loading view class
   loadingView: undefined,
 
+  // Region leveraged by show()
+  region: undefined,
+
+  // Bound view
+  view: undefined,
+
+  // options {
+  //   region:  {Marionette.Region} The target region for show() (lifetime bound)
+  //   view:    {Marionette.View} An already instantiated view (lifetime bound)
+  //   bindTo:  {Marionette.Object} An arbitrary object for lifetime binding
+  //   present: {boolean} Whether to present on initialize (default false)
+  // }
   constructor: function (options) {
     options = options || {};
-
-    // Bind to a region
-    if (options.region) {
-      this.region = options.region;
-      this.bindTo(this.region);
-    }
-
-    // Bind to a view
-    if (options.view) {
-      this.view = options.view;
-      this.bindTo(this.view);
-    }
+    // Bind to an injected region and/or view
+    if (options.region) this.setRegion(options.region);
+    if (options.view) this.setView(options.view);
 
     Presenter.__super__.constructor.apply(this, arguments);
-    this.initializeState();
 
-    // Present immediately initialize unless told otherwise
-    if (options.present !== false) this.present(options);
+    // Present immediately on initialize if specified
+    if (options.present) this.present(options);
   },
 
   // Hooks for presentation logic
+  // onPresent() should be idempotent, because this may be called more than once (not only at
+  // initialization time).
+  // options {
+  //   region: {Region} The target region for show()
+  //   view:   {View} An already instantiated view to bind to
+  // }
   present: function (options) {
+    options = options || {};
+    if (this.isDestroyed) throw new Error('Presenter has already been destroyed');
+    // Bind to an injected region and/or view
+    if (options.region) this.setRegion(options.region);
+    if (options.view) this.setView(options.view);
     this.triggerMethod('before:present', options);
     this.triggerMethod('present', options);
   },
@@ -48,13 +60,14 @@ var Presenter = Marionette.Object.extend({
   //                  - Otherwise if truthy, loading view will render until view's
   //                    entity/entities are synced.
   //   loadingView: {Marionette.View} A view to render while loading
-  //   bindToView:  {boolean} Whether to bind lifecycle to view (default true)
+  //   bindToView:  {boolean} Whether to bind lifecycle to view (default true})
   // }
   show: function (view, options) {      
     options = options || {};
+    if (this.isDestroyed) throw new Error('Presenter has already been destroyed');
     if (!this.region) throw new Error('No region defined');
 
-    if (options.bindToView !== false) this.bindTo(view);
+    if (options.bindToView !== false) this.setView(view);
 
     if (options.loading) {
       this._showLoading(view, options);
@@ -66,9 +79,14 @@ var Presenter = Marionette.Object.extend({
     }
   },
 
-  // Bind lifetime to another Marionette object
-  bindTo: function (obj) {
-    this.listenTo(obj, 'destroy', this.destroy);
+  setRegion: function (region) {
+    this.region = region;
+    this.bindTo(region);
+  },
+
+  setView: function (view) {
+    this.view = view;
+    this.bindTo(view);
   },
 
   getRegion: function () {
@@ -79,6 +97,7 @@ var Presenter = Marionette.Object.extend({
     return this.view;
   },
 
+  // Render loading view if loading is in progress, then swap out for the original view
   _showLoading: function (view, options) {
     options = options || {};
     var LoadingView = options.loadingView || this.loadingView;
@@ -96,14 +115,16 @@ var Presenter = Marionette.Object.extend({
       })
       .catch(function onError(error) {
         onLoaded();
+        // Documented workaround ES6 promises to bubble error to window
         setTimeout(function () {
           throw error;
         }, 0);
         throw error;
       });
 
-    // Show loading view if not already loaded. This works because resolved promises trigger their
-    // handlers immediately, per spec, to prevent race conditions.
+    // Show loading view if not already loaded.
+    // This works because resolved promises trigger their handlers immediately, per spec,
+    // to prevent race conditions.
     if (!loaded) {
       this.triggerMethod('before:show:loading', loadingView, options);
       this.region.show(loadingView, options);
@@ -111,17 +132,15 @@ var Presenter = Marionette.Object.extend({
     }
   },
 
+  // Show the original view, unless it has been superceded by another (usually caused by a user
+  // navigating during loading).
   _loaded: function (loadingView, options) {
     var showOpts;
     if (this.region.currentView !== loadingView || this.getRegion().isDestroyed) {
-      // The region contains an external view shown during loading, superceding the bound view;
-      // destroy the bound view and, by side effect, this Presenter. This is usually caused
-      // when the user navigates to a different view during loading.
+      // The original view has been superceded; destroy it.
       this.view.destroy();
     } else {
-      // The loading view still showing and the entities are synced is back; swap out the
-      // loading view for the bound view. bindToView is false because if view was bound,
-      // it was bound on the initial call to show().
+      // Replace loading view with original view
       showOpts = _.extend({}, options, {
         loading: false,
         bindToView: false
@@ -130,7 +149,5 @@ var Presenter = Marionette.Object.extend({
     }
   }
 });
-
-_.extend(Presenter.prototype, HasState);
 
 Marionette.Presenter = Presenter;
