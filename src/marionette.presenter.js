@@ -3,10 +3,6 @@
 /*
  * A Presenter's purpose is to provide nestable presentation and data logic for views with built
  * in support for loading views and view state.
- *
- * Inspiration:
- *   - http://victorsavkin.com/post/49767352960/supervising-presenters.
- *   - http://www.backbonerails.com/screencasts/loading-views
  */
 var Presenter = Marionette.StateService.extend({
 
