@@ -22,16 +22,21 @@ var StateService = Marionette.Object.extend({
   _myState: false,
 
   // options {
+  //   bindTo:     {Marionette.Object} An arbitrary object for lifetime binding
   //   state:      {Model|attrs|true} Initial state; true will use defaults
   //   stateModel: {Model class} Model class to represent state
   // }
   constructor: function (options) {
     options = options || {};
+    // Bind to lifetime to object
     if (options.bindTo) this.bindTo(options.bindTo);
 
     // State model class is either passed in, on the class, or a standard Backbone model
     this.stateModel = options.stateModel || this.stateModel || Backbone.Model;
+
+    // Optionally set state, otherwise state will be initialized lazily on getState()
     if (options.state) this.setState(options.state);
+
     this.once('destroy', this._cleanupEvents, this);
   },
 

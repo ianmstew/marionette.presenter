@@ -12,20 +12,14 @@ var Presenter = Marionette.StateService.extend({
   // Region leveraged by show()
   region: undefined,
 
-  // Bound view
-  view: undefined,
-
   // options {
   //   region:  {Marionette.Region} The target region for show() (lifetime bound)
-  //   view:    {Marionette.View} An already instantiated view (lifetime bound)
-  //   bindTo:  {Marionette.Object} An arbitrary object for lifetime binding
   //   present: {boolean} Whether to present on initialize (default false)
   // }
   constructor: function (options) {
     options = options || {};
-    // Bind to an injected region and/or view
+    // Bind to an injected region
     if (options.region) this.setRegion(options.region);
-    if (options.view) this.setView(options.view);
 
     Presenter.__super__.constructor.apply(this, arguments);
 
@@ -37,8 +31,8 @@ var Presenter = Marionette.StateService.extend({
   // onPresent() should be idempotent, because this may be called more than once (not only at
   // initialization time).
   // options {
-  //   region: {Region} The target region for show()
-  //   view:   {View} An already instantiated view to bind to
+  //   region: {Marionette.Region} The target region for show()
+  //   view:   {Marionette.View} An already instantiated view to bind to
   // }
   present: function (options) {
     options = options || {};
@@ -63,7 +57,7 @@ var Presenter = Marionette.StateService.extend({
     if (this.isDestroyed) throw new Error('Presenter has already been destroyed');
     if (!this.region) throw new Error('No region defined');
 
-    if (options.bindToView !== false) this.setView(view);
+    if (options.bindToView !== false) this.bindTo(view);
 
     if (options.loading) {
       this._showLoading(view, options);
@@ -80,17 +74,8 @@ var Presenter = Marionette.StateService.extend({
     this.bindTo(region);
   },
 
-  setView: function (view) {
-    this.view = view;
-    this.bindTo(view);
-  },
-
   getRegion: function () {
     return this.region;
-  },
-
-  getView: function () {
-    return this.view;
   },
 
   // Render loading view if loading is in progress, then swap out for the original view
@@ -102,7 +87,7 @@ var Presenter = Marionette.StateService.extend({
     var loaded = false;
 
     // When entities are ready, show original view
-    var onLoaded = this._loaded.bind(this, loadingView, options);
+    var onLoaded = this._loaded.bind(this, loadingView, view, options);
 
     Promise.all(promises)
       .then(function () {
@@ -128,20 +113,20 @@ var Presenter = Marionette.StateService.extend({
     }
   },
 
-  // Show the original view, unless it has been superceded by another (usually caused by a user
+  // Show the bound to view, unless it has been superceded by another (usually caused by a user
   // navigating during loading).
-  _loaded: function (loadingView, options) {
+  _loaded: function (loadingView, view, options) {
     var showOpts;
     if (this.region.currentView !== loadingView || this.getRegion().isDestroyed) {
-      // The original view has been superceded; destroy it.
-      this.view.destroy();
+      // The bound to view has been superceded; destroy it.
+      view.destroy();
     } else {
       // Replace loading view with original view
       showOpts = _.extend({}, options, {
         loading: false,
         bindToView: false
       });
-      this.show(this.view, showOpts);
+      this.show(view, showOpts);
     }
   }
 });
