@@ -22,7 +22,6 @@
 }(this, function(Backbone, Marionette, _) {
   'use strict';
 
-  // @include has-state.mixin.js
   // @include marionette.state-service.js
   // @include marionette.presenter.js
 
