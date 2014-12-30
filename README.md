@@ -1,11 +1,13 @@
 Marionette.Presenter
 ====================
+A top-level container for view and model instantiation logic, such as the delegate for an application route or controller for a complex view component.
+
+## Reasoning
 
 Commonly within Backbone applications, view state is stored within data models side by side
-persisted data.  This data is commonly managed from views themselves.  For simple applications
-this approach works well; however, as complexity increases, models and views can become difficult
-to maintain.  In these situations, keeping view state out of both data models and views can
-enhance separate of concerns and improve maintainability.
+persisted data.  For simple applications this approach works well; however, as complexity increases,
+models and views can become difficult to maintain.  In these situations, keeping view state out of
+both data models and views can enhance separate of concerns and improve maintainability.
 
 `Marionette.Presenter` is a nestable presentation manager with state awareness.  It extends from
 `Marionette.StateService`, which can be used on its own for greater flexibility in dealing with
